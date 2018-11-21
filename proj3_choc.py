@@ -290,9 +290,9 @@ def process_command(command):
     conn = sqlite3.connect(DBNAME)
     cur = conn.cursor()
 
-    statement = ''
     #construct and execute SQL query for bars commands
     if primary_command == "bars":
+        #set defaults
         statement = '''
             SELECT b.SpecificBeanBarName, b.Company, company.EnglishName, b.Rating, b.CocoaPercent, beans.EnglishName
             FROM Bars AS b JOIN Countries AS company ON b.CompanyLocationId = company.Id
@@ -301,6 +301,8 @@ def process_command(command):
         order = 'ORDER BY b.Rating '
         direction = 'DESC '
         limit = 'LIMIT 10 '
+
+        #adjust for specified parameters
         for item in params.keys():
             if item == "sellcountry":
                 where = 'WHERE company.Alpha2="{}" '.format(params[item].upper())
@@ -321,6 +323,7 @@ def process_command(command):
                 direction = 'ASC '
                 limit = 'LIMIT {}'.format(params[item])
 
+        #construct and execute statement
         statement = statement + where + order + direction + limit
         cur.execute(statement)
         results = cur.fetchall()
@@ -328,15 +331,16 @@ def process_command(command):
 
     #construct and execute SQL query for companies commands
     elif primary_command == "companies":
+        #set defaults
         statement1 = 'SELECT b.Company, c.EnglishName, '
         agg = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
         statement2 = 'FROM Bars AS b JOIN Countries AS c ON b.CompanyLocationId = c.Id '
         where = ''
-        group = 'GROUP BY b.Company '
-        statement3 = 'HAVING COUNT(b.Id) > 4 ORDER BY Agg'
+        statement3 = 'GROUP BY b.Company HAVING COUNT(b.Id) > 4 ORDER BY Agg'
         direction = 'DESC '
         limit = 'LIMIT 10 '
 
+        #adjust for specified parameters
         for item in params.keys():
             if item == "country":
                 where = 'WHERE c.Alpha2="{}" '.format(params[item].upper())
@@ -355,30 +359,32 @@ def process_command(command):
                 direction = 'ASC '
                 limit = 'LIMIT {}'.format(params[item])
 
-        statement = statement1 + agg + statement2 + where + group + statement3 + direction + limit
+        #construct and execute statement
+        statement = statement1 + agg + statement2 + where + statement3 + direction + limit
         cur.execute(statement)
         results = cur.fetchall()
 
     #construct and execute SQL query for countries commands
     elif primary_command == "countries":
+        #set default
         statement1 = 'SELECT c.EnglishName, c.Region, '
         agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.'
         agg2 = '=c.Id) AS Agg '
         statement2 = 'FROM Countries AS c JOIN Bars AS b ON c.Id = b.'
         fkey = 'CompanyLocationId '
         where = ''
-        group = 'GROUP BY c.Id '
-        statement3 = 'HAVING COUNT(b.Id) > 4 ORDER BY Agg '
+        statement3 = 'GROUP BY c.Id HAVING COUNT(b.Id) > 4 ORDER BY Agg '
         direction = 'DESC '
         limit = 'LIMIT 10 '
 
+        #adjust for specified parameters
         for item in params.keys():
             if item == "region":
                 where = 'WHERE c.Region = "{}" '.format(params[item].capitalize())
             if item == "sellers":
-                fkey = 'b.CompanyLocationId '
+                fkey = 'CompanyLocationId '
             if item == "sources":
-                fkey = 'b.BroadBeanOriginId '
+                fkey = 'BroadBeanOriginId '
             if item == "ratings":
                 agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.'
             if item == "cocoa":
@@ -392,13 +398,47 @@ def process_command(command):
                 direction = 'ASC '
                 limit = 'LIMIT {}'.format(params[item])
 
-        statement = statement1 + agg1 + fkey + agg2 + statement2 + fkey + where + group + statement3 + direction + limit
+        #construct and execute statement
+        statement = statement1 + agg1 + fkey + agg2 + statement2 + fkey + where + statement3 + direction + limit
         cur.execute(statement)
         results = cur.fetchall()
 
     #construct and execute SQL query for regions commands
     elif primary_command == "regions":
-        pass
+        #set defaults
+        statement1 = 'SELECT c.Region, '
+        agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 JOIN Countries AS c2 ON b2.'
+        agg2 = '= c2.Id WHERE c2.Region=c.Region) AS Agg '
+        statement2 = 'FROM Countries AS c JOIN Bars AS b ON c.Id = b.'
+        fkey = 'CompanyLocationId '
+        where = ''
+        statement3 = 'GROUP BY c.Region HAVING COUNT(b.Id) > 4 ORDER BY Agg '
+        direction = 'DESC '
+        limit = 'LIMIT 10 '
+
+        #adjust for specified parameters
+        for item in params.keys():
+            if item == "sellers":
+                fkey = 'CompanyLocationId '
+            if item == "sources":
+                fkey = 'BroadBeanOriginId '
+            if item == "ratings":
+                agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 JOIN Countries AS c2 ON b2.'
+            if item == "cocoa":
+                agg1 = '(SELECT AVG(CocoaPercent) FROM Bars AS b2 JOIN Countries AS c2 ON b2.'
+            if item == "bars_sold":
+                agg1 = '(SELECT COUNT(b2.Id) FROM Bars AS b2 JOIN Countries AS c2 ON b2.'
+            if item == "top":
+                direction = 'DESC '
+                limit = 'LIMIT {}'.format(params[item])
+            if item == "bottom":
+                direction = 'ASC '
+                limit = 'LIMIT {}'.format(params[item])
+
+        #construct and execute statement
+        statement = statement1 + agg1 + fkey + agg2 + statement2 + fkey + where + statement3 + direction + limit
+        cur.execute(statement)
+        results = cur.fetchall()
 
     else:
         pass
@@ -424,7 +464,7 @@ def interactive_prompt():
             print(help_text)
             continue
 
-commandstring = "countries region=Asia ratings"
+commandstring = "regions cocoa"
 results = process_command(commandstring)
 for line in results:
     print(line)
