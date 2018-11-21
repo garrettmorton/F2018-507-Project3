@@ -275,7 +275,7 @@ def process_command(command):
             params[item_split[0]] = item_split[1]
         else:
             params[item_split[0]] = ""
-    print(params)
+    #print(params)
 
     #check whether command parameters are valid with no duplicate parameters
     for item in params.keys():
@@ -286,6 +286,12 @@ def process_command(command):
                 if check_no_duplicates(list(params.keys())[i], list(params.keys())[i+1:]) == False:
                     return False
 
+    #open database connection
+    conn = sqlite3.connect(DBNAME)
+    cur = conn.cursor()
+
+    statement = ''
+    #construct and execute SQL query for bars commands
     if primary_command == "bars":
         statement = '''
             SELECT b.SpecificBeanBarName, b.Company, company.EnglishName, b.Rating, b.CocoaPercent, beans.EnglishName
@@ -297,13 +303,13 @@ def process_command(command):
         limit = 'LIMIT 10 '
         for item in params.keys():
             if item == "sellcountry":
-                where = 'WHERE company.Alpha2={} '.format(params[item])
+                where = 'WHERE company.Alpha2="{}" '.format(params[item].upper())
             if item =="sourcecountry":
-                where = 'WHERE beans.Alpha2={} '.format(params[item])
+                where = 'WHERE beans.Alpha2="{}" '.format(params[item].upper())
             if item == "sellregion":
-                where = 'WHERE company.Region={} '.format(params[item])
+                where = 'WHERE company.Region="{}" '.format(params[item].capitalize())
             if item == "sourceregion":
-                where = 'WHERE beans.Region={} '.format(params[item])
+                where = 'WHERE beans.Region="{}" '.format(params[item].capitalize())
             if item == "ratings":
                 order = 'ORDER BY b.Rating '
             if item == "cocoa":
@@ -316,24 +322,59 @@ def process_command(command):
                 limit = 'LIMIT {}'.format(params[item])
 
         statement = statement + where + order + direction + limit
-        conn = sqlite3.connect(DBNAME)
-        cur = conn.cursor()
         cur.execute(statement)
         results = cur.fetchall()
 
 
+    #construct and execute SQL query for companies commands
     elif primary_command == "companies":
-        pass
+        statement1 = 'SELECT b.Company, c.EnglishName, '
+        agg = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgRating '
+        statement2 = 'FROM Bars AS b JOIN Countries AS c ON b.CompanyLocationId = c.Id '
+        where = ''
+        group = 'GROUP BY b.Company '
+        having = 'HAVING COUNT(b.Id) > 4 '
+        order = 'ORDER BY AvgRating '
+        direction = 'DESC '
+        limit = 'LIMIT 10 '
 
+        for item in params.keys():
+            if item == "country":
+                where = 'WHERE c.Alpha2="{}" '.format(params[item].upper())
+            if item == "region":
+                where = 'WHERE c.Region="{}" '.format(params[item].capitalize())
+            if item == "ratings":
+                agg = '(SELECT AVG(b2.Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgRating '
+                order = 'ORDER BY AvgRating '
+            if item == "cocoa":
+                agg = '(SELECT AVG(b2.CocoaPercent) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgCocoaPercent '
+                order = 'ORDER BY AvgCocoaPercent '
+            if item == "bars_sold":
+                agg = '(SELECT COUNT(b2.Id) FROM Bars AS b2 WHERE b2.Company=b.Company) AS BarsSold '
+                order = 'ORDER BY BarsSold '
+            if item == "top":
+                direction = 'DESC '
+                limit = 'LIMIT {}'.format(params[item])
+            if item == "bottom":
+                direction = 'ASC '
+                limit = 'LIMIT {}'.format(params[item])
+
+        statement = statement1 + agg + statement2 + where + group + having + order + direction + limit
+        cur.execute(statement)
+        results = cur.fetchall()
+
+    #construct and execute SQL query for countries commands
     elif primary_command == "countries":
         pass
 
+    #construct and execute SQL query for regions commands
     elif primary_command == "regions":
         pass
 
     else:
         pass
 
+    #close database connection and return results list
     conn.close()
     return results
 
@@ -354,7 +395,7 @@ def interactive_prompt():
             print(help_text)
             continue
 
-commandstring = "bars ratings"
+commandstring = "companies region=europe"
 results = process_command(commandstring)
 for line in results:
     print(line)
