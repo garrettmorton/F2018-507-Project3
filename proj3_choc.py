@@ -329,12 +329,11 @@ def process_command(command):
     #construct and execute SQL query for companies commands
     elif primary_command == "companies":
         statement1 = 'SELECT b.Company, c.EnglishName, '
-        agg = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgRating '
+        agg = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
         statement2 = 'FROM Bars AS b JOIN Countries AS c ON b.CompanyLocationId = c.Id '
         where = ''
         group = 'GROUP BY b.Company '
-        having = 'HAVING COUNT(b.Id) > 4 '
-        order = 'ORDER BY AvgRating '
+        statement3 = 'HAVING COUNT(b.Id) > 4 ORDER BY Agg'
         direction = 'DESC '
         limit = 'LIMIT 10 '
 
@@ -344,14 +343,11 @@ def process_command(command):
             if item == "region":
                 where = 'WHERE c.Region="{}" '.format(params[item].capitalize())
             if item == "ratings":
-                agg = '(SELECT AVG(b2.Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgRating '
-                order = 'ORDER BY AvgRating '
+                agg = '(SELECT AVG(b2.Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
             if item == "cocoa":
-                agg = '(SELECT AVG(b2.CocoaPercent) FROM Bars AS b2 WHERE b2.Company=b.Company) AS AvgCocoaPercent '
-                order = 'ORDER BY AvgCocoaPercent '
+                agg = '(SELECT AVG(b2.CocoaPercent) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
             if item == "bars_sold":
-                agg = '(SELECT COUNT(b2.Id) FROM Bars AS b2 WHERE b2.Company=b.Company) AS BarsSold '
-                order = 'ORDER BY BarsSold '
+                agg = '(SELECT COUNT(b2.Id) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
             if item == "top":
                 direction = 'DESC '
                 limit = 'LIMIT {}'.format(params[item])
@@ -359,13 +355,46 @@ def process_command(command):
                 direction = 'ASC '
                 limit = 'LIMIT {}'.format(params[item])
 
-        statement = statement1 + agg + statement2 + where + group + having + order + direction + limit
+        statement = statement1 + agg + statement2 + where + group + statement3 + direction + limit
         cur.execute(statement)
         results = cur.fetchall()
 
     #construct and execute SQL query for countries commands
     elif primary_command == "countries":
-        pass
+        statement1 = 'SELECT c.EnglishName, c.Region, '
+        agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.'
+        agg2 = '=c.Id) AS Agg '
+        statement2 = 'FROM Countries AS c JOIN Bars AS b ON c.Id = b.'
+        fkey = 'CompanyLocationId '
+        where = ''
+        group = 'GROUP BY c.Id '
+        statement3 = 'HAVING COUNT(b.Id) > 4 ORDER BY Agg '
+        direction = 'DESC '
+        limit = 'LIMIT 10 '
+
+        for item in params.keys():
+            if item == "region":
+                where = 'WHERE c.Region = "{}" '.format(params[item].capitalize())
+            if item == "sellers":
+                fkey = 'b.CompanyLocationId '
+            if item == "sources":
+                fkey = 'b.BroadBeanOriginId '
+            if item == "ratings":
+                agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.'
+            if item == "cocoa":
+                agg1 = '(SELECT AVG(CocoaPercent) FROM Bars AS b2 WHERE b2.'
+            if item == "bars_sold":
+                agg1 = '(SELECT COUNT(b2.Id) FROM Bars AS b2 WHERE b2.'
+            if item == "top":
+                direction = 'DESC '
+                limit = 'LIMIT {}'.format(params[item])
+            if item == "bottom":
+                direction = 'ASC '
+                limit = 'LIMIT {}'.format(params[item])
+
+        statement = statement1 + agg1 + fkey + agg2 + statement2 + fkey + where + group + statement3 + direction + limit
+        cur.execute(statement)
+        results = cur.fetchall()
 
     #construct and execute SQL query for regions commands
     elif primary_command == "regions":
@@ -395,7 +424,7 @@ def interactive_prompt():
             print(help_text)
             continue
 
-commandstring = "companies region=europe"
+commandstring = "countries region=Asia ratings"
 results = process_command(commandstring)
 for line in results:
     print(line)
