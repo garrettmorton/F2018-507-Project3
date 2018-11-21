@@ -39,65 +39,304 @@ try:
 except:
     pass
 
-## populate Countries Table
-f = open(COUNTRIESJSON, 'r')
-f_text = f.read()
-countries_json = json.loads(f_text)
-f.close()
-fields = ['alpha2Code', 'alpha3Code', 'name', 'region', 'subregion', 'population', 'area']
+conn.commit()
 
-for item in countries_json:
-    item_values = []
-    for field in fields:
-        if field in item.keys():
-            item_values.append(item[field])
-        else:
-            item_values.append('')
-    statement = '''
-    INSERT INTO Countries (Alpha2, Alpha3, EnglishName, Region, Subregion, Population, Area)
-    VALUES (?,?,?,?,?,?,?)
-    '''
-    cur.execute(statement, item_values)
+## populate Countries Table
+# check whether Countries is already populated
+statement = '''SELECT Id FROM Countries'''
+cur.execute(statement)
+countrieslength = cur.fetchall()
+if len(countrieslength) == 250:
+    pass
+    #print("Countries already imported!")
+
+# if not alrady populated, populate Countries table
+else:
+    statement = '''DELETE FROM Countries'''
+    cur.execute(statement)
+    conn.commit()
+    #print("Countries records deleted!")
+
+    f = open(COUNTRIESJSON, 'r', encoding='utf8')
+    f_text = f.read()
+    countries_json = json.loads(f_text)
+    f.close()
+    fields = ['alpha2Code', 'alpha3Code', 'name', 'region', 'subregion', 'population', 'area']
+
+    for item in countries_json:
+        item_values = []
+        for field in fields:
+            if field in item.keys():
+                item_values.append(item[field])
+            else:
+                item_values.append('')
+        #sql_input = tuple(item_values)
+        statement = '''
+        INSERT INTO Countries (Alpha2, Alpha3, EnglishName, Region, Subregion, Population, Area)
+        VALUES (?,?,?,?,?,?,?)
+        '''
+        #print(sql_input)
+        cur.execute(statement, item_values)
+
+    conn.commit()
     
 
-# ## create Bars table
-# statement = '''
-# CREATE TABLE Bars (
-#     Id INTEGER PRIMARY KEY AUTOINCREMENT,
-#     Company TEXT,
-#     SpecificBeanBarName TEXT,
-#     REF TEXT,
-#     ReviewDate TEXT,
-#     CocoaPercent REAL,
-#     CompanyLocationId INTEGER,
-#     Rating REAL,
-#     BeanType TEXT,
-#     BroadBeanOriginId INTEGER
-#     )
-# '''
-# cur.execute(statement)
+## create Bars table
+statement = '''
+CREATE TABLE Bars (
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Company TEXT,
+    SpecificBeanBarName TEXT,
+    REF TEXT,
+    ReviewDate TEXT,
+    CocoaPercent REAL,
+    CompanyLocationId INTEGER,
+    Rating REAL,
+    BeanType TEXT,
+    BroadBeanOriginId INTEGER
+    )
+'''
+try:
+    cur.execute(statement)
+except:
+    pass
 
-# ## populate Bars table
-# with open(BARSCSV) as csvDataFile:
-#     csvReader = csv.reader(csvDataFile)
-#     for row in csvReader:
-#         items = []
-#         for i in range()
+conn.commit()
 
-#         statement = '''
-#         INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
-#         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-#         '''
-#         cur.execute(statement, items)
-#         print("added!")
-#     csvDataFile.close()
+## populate Bars table
+# check whether Bars is already populated
+statement = '''SELECT Id FROM Bars'''
+cur.execute(statement)
+barslength = cur.fetchall()
+if len(barslength) == 1795:
+    pass
+    #print("Bars already imported!")
+
+# if not alrady populated, populate Bars table
+else:
+    statement = '''DELETE FROM Bars'''
+    cur.execute(statement)
+    conn.commit()
+    #print("Bars records deleted!")
+
+    with open(BARSCSV) as csvDataFile:
+        csvReader = csv.reader(csvDataFile)
+        for row in csvReader:
+            if row[0] != "Company":
+                conn = sqlite3.connect(DBNAME)
+                cur = conn.cursor()
+
+                item_values = []
+                for i in range(4):
+                    item_values.append(row[i])
+
+                #remove % from cocoa percentage
+                percent = row[4][:-1]
+                item_values.append(percent)
+
+                #find CompanyLocationId
+                statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[5])
+                cur.execute(statement)
+                result = cur.fetchone()
+                if result != None:
+                    locationid = result[0]
+                else:
+                    locationid = ''
+                item_values.append(locationid)
+
+                item_values.append(row[6])
+                item_values.append(row[7])
+
+                #find BroadBeanOriginId
+                if row[8] == "Unknown":
+                    item_values.append("")
+                else:
+                    statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[8])
+                    cur.execute(statement)
+                    result = cur.fetchone()
+                    if result != None:
+                        originid = result[0]
+                    else:
+                        originid = ''
+                    item_values.append(originid)
+
+                statement = '''
+                INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                '''
+                print(item_values)
+                cur.execute(statement, item_values)
+                conn.commit()
+                conn.close()
+        csvDataFile.close()
+
+
+
+# Part 2: Implement logic to process user commands
+
+## construct dictionary of possible commands
+conn = sqlite3.connect(DBNAME)
+cur = conn.cursor()
+
+#get list of alpha2 codes
+statement = '''SELECT Alpha2 FROM Countries'''
+cur.execute(statement)
+result = cur.fetchall()
+alpha2 = []
+for item in result:
+    alpha2.append(item[0].lower())
+
+#get list of regions
+statement = '''SELECT Region FROM Countries'''
+cur.execute(statement)
+result = cur.fetchall()
+regions = []
+for item in result:
+    regions.append(item[0].lower())
 
 conn.close()
 
 
-# Part 2: Implement logic to process user commands
+COMMAND_DICT = {
+    "bars" : {
+        "sellcountry" : alpha2,
+        "sourcecountry" : alpha2,
+        "sellregion" : regions,
+        "sourceregion" : regions,
+        "ratings" : "",
+        "cocoa" : "",
+        "top" : "",
+        "bottom" : ""
+    },
+    "companies" : {
+        "country" : alpha2,
+        "region" : regions,
+        "ratings" : "",
+        "cocoa" : "",
+        "bars_sold" : "",
+        "top" : "",
+        "bottom" : ""
+    },
+    "countries" : {
+        "region" : regions,
+        "sellers" : "",
+        "sources" : "",
+        "ratings" : "",
+        "cocoa" : "",
+        "bars_sold" : "",
+        "top" : "",
+        "bottom" : ""
+    },
+    "regions" : {
+        "sellers" : "",
+        "sources" : "",
+        "ratings" : "",
+        "cocoa" : "",
+        "bars_sold" : "",
+        "top" : "",
+        "bottom" : ""
+    }
+}
+
+def check_no_duplicates(command, command_list):
+    matrix = [["sellcountry", "sourcecountry", "sellregion", "sourceregion"],
+        ["ratings", "cocoa", "bars_sold"],
+        ["top", "bottom"],
+        ["country", "region"],
+        ["sellers", "sources"]
+    ]
+    for row in matrix:
+        if command in row:
+            for item in command_list:
+                if item in row:
+                    return False
+    return True
+
+def check_valid(command, command_key, command_value):
+    if command not in COMMAND_DICT.keys():
+        return False
+    else:
+        if command_key not in COMMAND_DICT[command].keys():
+            return False
+        else:
+            if command_value not in COMMAND_DICT[command][command_key]:
+                return False
+            else:
+                return True
+
+
 def process_command(command):
-    return []
+    command_list = command.lower().split()
+    primary_command = command_list[0]
+    params = {}
+    for item in command_list[1:]:
+        item_split = item.split("=")
+        if len(item_split) > 1:
+            params[item_split[0]] = item_split[1]
+        else:
+            params[item_split[0]] = ""
+    print(params)
+
+    #check whether command parameters are valid with no duplicate parameters
+    for item in params.keys():
+        if check_valid(primary_command, item, params[item]) == False:
+            return False
+        else:
+            for i in range(len(params.keys()) - 1):
+                if check_no_duplicates(list(params.keys())[i], list(params.keys())[i+1:]) == False:
+                    return False
+
+    if primary_command == "bars":
+        statement = '''
+            SELECT b.SpecificBeanBarName, b.Company, company.EnglishName, b.Rating, b.CocoaPercent, beans.EnglishName
+            FROM Bars AS b JOIN Countries AS company ON b.CompanyLocationId = company.Id
+                JOIN Countries AS beans ON b.BroadBeanOriginId = beans.Id '''
+        where = ''
+        order = 'ORDER BY b.Rating '
+        direction = 'DESC '
+        limit = 'LIMIT 10 '
+        for item in params.keys():
+            if item == "sellcountry":
+                where = 'WHERE company.Alpha2={} '.format(params[item])
+            if item =="sourcecountry":
+                where = 'WHERE beans.Alpha2={} '.format(params[item])
+            if item == "sellregion":
+                where = 'WHERE company.Region={} '.format(params[item])
+            if item == "sourceregion":
+                where = 'WHERE beans.Region={} '.format(params[item])
+            if item == "ratings":
+                order = 'ORDER BY b.Rating '
+            if item == "cocoa":
+                order = 'ORDER BY b.CocoaPercent '
+            if item == "top":
+                direction = 'DESC '
+                limit = 'LIMIT {}'.format(params[item])
+            if item == "bottom":
+                direction = 'ASC '
+                limit = 'LIMIT {}'.format(params[item])
+
+        statement = statement + where + order + direction + limit
+        conn = sqlite3.connect(DBNAME)
+        cur = conn.cursor()
+        cur.execute(statement)
+        results = cur.fetchall()
+
+
+    elif primary_command == "companies":
+        pass
+
+    elif primary_command == "countries":
+        pass
+
+    elif primary_command == "regions":
+        pass
+
+    else:
+        pass
+
+    conn.close()
+    return results
+
 
 
 def load_help_text():
@@ -114,6 +353,11 @@ def interactive_prompt():
         if response == 'help':
             print(help_text)
             continue
+
+commandstring = "bars ratings"
+results = process_command(commandstring)
+for line in results:
+    print(line)
 
 # Make sure nothing runs or prints out when this file is run as a module
 # if __name__=="__main__":
