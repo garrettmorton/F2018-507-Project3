@@ -119,7 +119,7 @@ else:
     conn.commit()
     #print("Bars records deleted!")
 
-    with open(BARSCSV) as csvDataFile:
+    with open(BARSCSV, encoding='utf8') as csvDataFile:
         csvReader = csv.reader(csvDataFile)
         for row in csvReader:
             if row[0] != "Company":
@@ -164,7 +164,7 @@ else:
                 INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 '''
-                print(item_values)
+                #print(item_values)
                 cur.execute(statement, item_values)
                 conn.commit()
                 conn.close()
@@ -258,6 +258,9 @@ def check_valid(command, command_key, command_value):
     else:
         if command_key not in COMMAND_DICT[command].keys():
             return False
+        elif command_key in ["top", "bottom"]:
+            if not command_value.isdigit():
+                return False
         else:
             if command_value not in COMMAND_DICT[command][command_key]:
                 return False
@@ -336,7 +339,7 @@ def process_command(command):
         agg = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.Company=b.Company) AS Agg '
         statement2 = 'FROM Bars AS b JOIN Countries AS c ON b.CompanyLocationId = c.Id '
         where = ''
-        statement3 = 'GROUP BY b.Company HAVING COUNT(b.Id) > 4 ORDER BY Agg'
+        statement3 = 'GROUP BY b.Company HAVING COUNT(b.Id) > 4 ORDER BY Agg '
         direction = 'DESC '
         limit = 'LIMIT 10 '
 
@@ -464,7 +467,7 @@ def interactive_prompt():
             print(help_text)
             continue
 
-commandstring = "regions cocoa"
+commandstring = "countries sources ratings bottom=5"
 results = process_command(commandstring)
 for line in results:
     print(line)
