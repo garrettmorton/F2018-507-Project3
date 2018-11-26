@@ -271,6 +271,9 @@ def check_valid(command, command_key, command_value):
 def process_command(command):
     command_list = command.lower().split()
     primary_command = command_list[0]
+    if primary_command not in COMMAND_DICT.keys():
+        return False
+
     params = {}
     for item in command_list[1:]:
         item_split = item.split("=")
@@ -328,6 +331,7 @@ def process_command(command):
 
         #construct and execute statement
         statement = statement + where + order + direction + limit
+        print(statement)
         cur.execute(statement)
         results = cur.fetchall()
 
@@ -457,26 +461,75 @@ def load_help_text():
         return f.read()
 
 # Part 3: Implement interactive prompt. We've started for you!
+def short_column(element):
+    formatted = str(element)
+    whitespace = 8 - len(formatted)
+    for i in range(whitespace):
+        formatted = formatted + ' '
+    return formatted
+
 def long_column(element):
-    pass 
+    formatted = ''
+    if len(element) > 15:
+        formatted = element[:12] + '...'
+    else:
+        formatted = element
+    whitespace = 16 - len(formatted)
+    for i in range(whitespace):
+        formatted = formatted + ' '
+    return formatted
+
+def check_percentage(element):
+    element_str = str(element)
+    element_list = element_str.split('.')
+    if len(element_list[0]) > 1:
+        return True
+    else:
+        return False
 
 def interactive_prompt():
     help_text = load_help_text()
-    response = ''
-    while response != 'exit':
-        response = input('Enter a command: ')
+    command = ''
+    while command != 'exit':
+        response = input('\nEnter a command: ')
+        command = response.lower()
 
-        if response == 'help':
+        if command == 'help':
             print(help_text)
             continue
+        elif command == '':
+            continue
+        elif command == 'exit':
+            print('Bye!')
+            continue
+        else:
+            result = process_command(command)
+            if result == False:
+                print('Command not recognized: {}'.format(response))
+            else:
+                result_text = ''
+                for row in result:
+                    for item in row:
+                        if type(item) == str:
+                            result_text += long_column(item)
+                        else:
+                            if check_percentage(item):
+                                result_text += short_column(str(item)+"%")
+                            else:
+                                rounded_item = round(item, 2)
+                                result_text += short_column(rounded_item)
+                    result_text += "\n"
+                print(result_text)
+    pass
 
-commandstring = "bars ratings top=3"
-results = process_command(commandstring)
-for line in results:
-    print(line)
-    print(len(line[0]))
-    print(type(line[2]))
 
-# Make sure nothing runs or prints out when this file is run as a module
-# if __name__=="__main__":
-#     interactive_prompt()
+# commandstring = "bars ratings top=3"
+# results = process_command(commandstring)
+# for line in results:
+#     print(line)
+#     print(long_column(line[1]) + short_column(line[3]) + long_column(line[-1]))
+
+
+#Make sure nothing runs or prints out when this file is run as a module
+if __name__=="__main__":
+    interactive_prompt()
