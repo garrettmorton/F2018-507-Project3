@@ -302,7 +302,7 @@ def process_command(command):
         statement = '''
             SELECT b.SpecificBeanBarName, b.Company, company.EnglishName, b.Rating, b.CocoaPercent, beans.EnglishName
             FROM Bars AS b JOIN Countries AS company ON b.CompanyLocationId = company.Id
-                JOIN Countries AS beans ON b.BroadBeanOriginId = beans.Id '''
+                LEFT JOIN Countries AS beans ON b.BroadBeanOriginId = beans.Id '''
         where = ''
         order = 'ORDER BY b.Rating '
         direction = 'DESC '
@@ -331,7 +331,6 @@ def process_command(command):
 
         #construct and execute statement
         statement = statement + where + order + direction + limit
-        print(statement)
         cur.execute(statement)
         results = cur.fetchall()
 
@@ -474,7 +473,7 @@ def long_column(element):
         formatted = element[:12] + '...'
     else:
         formatted = element
-    whitespace = 16 - len(formatted)
+    whitespace = 18 - len(formatted)
     for i in range(whitespace):
         formatted = formatted + ' '
     return formatted
@@ -510,7 +509,9 @@ def interactive_prompt():
                 result_text = ''
                 for row in result:
                     for item in row:
-                        if type(item) == str:
+                        if item == None:
+                            result_text += long_column("Unknown")
+                        elif type(item) == str:
                             result_text += long_column(item)
                         else:
                             if check_percentage(item):
