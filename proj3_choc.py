@@ -444,7 +444,7 @@ def process_command(command):
         results = cur.fetchall()
 
     else:
-        pass
+        results = []
 
     #close database connection and return results list
     conn.close()
@@ -457,6 +457,9 @@ def load_help_text():
         return f.read()
 
 # Part 3: Implement interactive prompt. We've started for you!
+def long_column(element):
+    pass 
+
 def interactive_prompt():
     help_text = load_help_text()
     response = ''
@@ -467,10 +470,12 @@ def interactive_prompt():
             print(help_text)
             continue
 
-commandstring = "countries sources ratings bottom=5"
+commandstring = "bars ratings top=3"
 results = process_command(commandstring)
 for line in results:
     print(line)
+    print(len(line[0]))
+    print(type(line[2]))
 
 # Make sure nothing runs or prints out when this file is run as a module
 # if __name__=="__main__":
