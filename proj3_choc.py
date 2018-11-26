@@ -376,7 +376,7 @@ def process_command(command):
         statement1 = 'SELECT c.EnglishName, c.Region, '
         agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 WHERE b2.'
         agg2 = '=c.Id) AS Agg '
-        statement2 = 'FROM Countries AS c JOIN Bars AS b ON c.Id = b.'
+        statement2 = 'FROM Countries AS c LEFT JOIN Bars AS b ON c.Id = b.'
         fkey = 'CompanyLocationId '
         where = ''
         statement3 = 'GROUP BY c.Id HAVING COUNT(b.Id) > 4 ORDER BY Agg '
@@ -413,9 +413,9 @@ def process_command(command):
     elif primary_command == "regions":
         #set defaults
         statement1 = 'SELECT c.Region, '
-        agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 JOIN Countries AS c2 ON b2.'
+        agg1 = '(SELECT AVG(Rating) FROM Bars AS b2 LEFT JOIN Countries AS c2 ON b2.'
         agg2 = '= c2.Id WHERE c2.Region=c.Region) AS Agg '
-        statement2 = 'FROM Countries AS c JOIN Bars AS b ON c.Id = b.'
+        statement2 = 'FROM Countries AS c LEFT JOIN Bars AS b ON c.Id = b.'
         fkey = 'CompanyLocationId '
         where = ''
         statement3 = 'GROUP BY c.Region HAVING COUNT(b.Id) > 4 ORDER BY Agg '
