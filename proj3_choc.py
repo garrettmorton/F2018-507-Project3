@@ -370,6 +370,7 @@ def process_command(command):
         cur.execute(statement)
         results = cur.fetchall()
 
+
     #construct and execute SQL query for countries commands
     elif primary_command == "countries":
         #set default
@@ -409,6 +410,7 @@ def process_command(command):
         cur.execute(statement)
         results = cur.fetchall()
 
+
     #construct and execute SQL query for regions commands
     elif primary_command == "regions":
         #set defaults
@@ -446,6 +448,7 @@ def process_command(command):
         cur.execute(statement)
         results = cur.fetchall()
 
+
     else:
         results = []
 
@@ -469,29 +472,21 @@ def short_column(element):
 
 def long_column(element):
     formatted = ''
-    if len(element) > 15:
-        formatted = element[:12] + '...'
+    if len(element) > 17:
+        formatted = element[:14] + '...'
     else:
         formatted = element
-    whitespace = 18 - len(formatted)
+    whitespace = 20 - len(formatted)
     for i in range(whitespace):
         formatted = formatted + ' '
     return formatted
-
-def check_percentage(element):
-    element_str = str(element)
-    element_list = element_str.split('.')
-    if len(element_list[0]) > 1:
-        return True
-    else:
-        return False
 
 def interactive_prompt():
     help_text = load_help_text()
     command = ''
     while command != 'exit':
         response = input('\nEnter a command: ')
-        command = response.lower()
+        command = response.lower().strip()
 
         if command == 'help':
             print(help_text)
@@ -507,18 +502,42 @@ def interactive_prompt():
                 print('Command not recognized: {}'.format(response))
             else:
                 result_text = ''
+                #add % sign to percentages
+                if "bars " in command:
+                    for i in range(len(result)):
+                            placeholder = list(result[i])
+                            new_item = str(result[i][4]) + "%"
+                            placeholder[4] = new_item
+                            result[i] = tuple(placeholder)
+                elif "cocoa" in command:
+                    if "companies" in command or "countries" in command:
+                        for i in range(len(result)):
+                            placeholder = list(result[i])
+                            new_item = str(round(result[i][2], 1)) + "%"
+                            placeholder[2] = new_item
+                            result[i] = tuple(placeholder)
+                    elif "regions" in command:
+                        for i in range(len(result)):
+                            placeholder = list(result[i])
+                            new_item = str(round(result[i][1], 1)) + "%"
+                            placeholder[1] = new_item
+                            result[i] = tuple(placeholder)
+                    else:
+                        pass
+                else:
+                    pass
+
                 for row in result:
                     for item in row:
                         if item == None:
                             result_text += long_column("Unknown")
-                        elif type(item) == str:
-                            result_text += long_column(item)
+                        elif type(item) != str:
+                            rounded_item = round(item, 2)
+                            result_text += short_column(rounded_item)
+                        elif item[-1] == "%":
+                            result_text += short_column(item)
                         else:
-                            if check_percentage(item):
-                                result_text += short_column(str(item)+"%")
-                            else:
-                                rounded_item = round(item, 2)
-                                result_text += short_column(rounded_item)
+                            result_text += long_column(item)
                     result_text += "\n"
                 print(result_text)
     pass
