@@ -12,163 +12,174 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
 # functions.
 
 # Part 1: Read data from CSV and JSON into a new database called choc.db
+
 DBNAME = 'choc.db'
 BARSCSV = 'flavors_of_cacao_cleaned.csv'
 COUNTRIESJSON = 'countries.json'
 
 
+def build_database():
+    conn = sqlite3.connect(DBNAME)
+    cur = conn.cursor()
 
-conn = sqlite3.connect(DBNAME)
-cur = conn.cursor()
-
-## create Countries table
-statement = '''
-CREATE TABLE Countries (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Alpha2 TEXT,
-    Alpha3 TEXT,
-    EnglishName TEXT,
-    Region TEXT,
-    Subregion TEXT,
-    Population INTEGER,
-    Area REAL
-)
-'''
-try:
-    cur.execute(statement)
-except:
-    pass
-
-conn.commit()
-
-## populate Countries Table
-# check whether Countries is already populated
-statement = '''SELECT Id FROM Countries'''
-cur.execute(statement)
-countrieslength = cur.fetchall()
-if len(countrieslength) == 250:
-    pass
-    #print("Countries already imported!") #for debugging
-
-# if not alrady populated, populate Countries table
-else:
-    statement = '''DELETE FROM Countries'''
+    ## drop tables before rebuilding
+    statement = "DROP TABLE IF EXISTS Bars"
     cur.execute(statement)
     conn.commit()
-    #print("Countries records deleted!") #for debugging
 
-    f = open(COUNTRIESJSON, 'r', encoding='utf8')
-    f_text = f.read()
-    countries_json = json.loads(f_text)
-    f.close()
-    fields = ['alpha2Code', 'alpha3Code', 'name', 'region', 'subregion', 'population', 'area']
-
-    for item in countries_json:
-        item_values = []
-        for field in fields:
-            if field in item.keys():
-                item_values.append(item[field])
-            else:
-                item_values.append('')
-        #sql_input = tuple(item_values)
-        statement = '''
-        INSERT INTO Countries (Alpha2, Alpha3, EnglishName, Region, Subregion, Population, Area)
-        VALUES (?,?,?,?,?,?,?)
-        '''
-        #print(sql_input) #for debugging
-        cur.execute(statement, item_values)
-
+    statement = "DROP TABLE IF EXISTS Countries"
+    cur.execute(statement)
     conn.commit()
-    
 
-## create Bars table
-statement = '''
-CREATE TABLE Bars (
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    Company TEXT,
-    SpecificBeanBarName TEXT,
-    REF TEXT,
-    ReviewDate TEXT,
-    CocoaPercent REAL,
-    CompanyLocationId INTEGER,
-    Rating REAL,
-    BeanType TEXT,
-    BroadBeanOriginId INTEGER
+    ## create Countries table
+    statement = '''
+    CREATE TABLE Countries (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Alpha2 TEXT,
+        Alpha3 TEXT,
+        EnglishName TEXT,
+        Region TEXT,
+        Subregion TEXT,
+        Population INTEGER,
+        Area REAL
     )
-'''
-try:
-    cur.execute(statement)
-except:
-    pass
+    '''
+    try:
+        cur.execute(statement)
+    except:
+        pass
 
-conn.commit()
-
-## populate Bars table
-# check whether Bars is already populated
-statement = '''SELECT Id FROM Bars'''
-cur.execute(statement)
-barslength = cur.fetchall()
-if len(barslength) == 1795:
-    pass
-    #print("Bars already imported!") #for debugging
-
-# if not alrady populated, populate Bars table
-else:
-    statement = '''DELETE FROM Bars'''
-    cur.execute(statement)
     conn.commit()
-    #print("Bars records deleted!") #for debugging
 
-    with open(BARSCSV, encoding='utf8') as csvDataFile:
-        csvReader = csv.reader(csvDataFile)
-        for row in csvReader:
-            if row[0] != "Company":
-                conn = sqlite3.connect(DBNAME)
-                cur = conn.cursor()
+    ## populate Countries Table
+    # check whether Countries is already populated
+    statement = '''SELECT Id FROM Countries'''
+    cur.execute(statement)
+    countrieslength = cur.fetchall()
+    if len(countrieslength) == 250:
+        pass
+        #print("Countries already imported!") #for debugging
 
-                item_values = []
-                for i in range(4):
-                    item_values.append(row[i])
+    # if not alrady populated, populate Countries table
+    else:
+        statement = '''DELETE FROM Countries'''
+        cur.execute(statement)
+        conn.commit()
+        #print("Countries records deleted!") #for debugging
 
-                #remove % from cocoa percentage
-                percent = row[4][:-1]
-                item_values.append(percent)
+        f = open(COUNTRIESJSON, 'r', encoding='utf8')
+        f_text = f.read()
+        countries_json = json.loads(f_text)
+        f.close()
+        fields = ['alpha2Code', 'alpha3Code', 'name', 'region', 'subregion', 'population', 'area']
 
-                #find CompanyLocationId
-                statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[5])
-                cur.execute(statement)
-                result = cur.fetchone()
-                if result != None:
-                    locationid = result[0]
+        for item in countries_json:
+            item_values = []
+            for field in fields:
+                if field in item.keys():
+                    item_values.append(item[field])
                 else:
-                    locationid = ''
-                item_values.append(locationid)
+                    item_values.append('')
+            #sql_input = tuple(item_values)
+            statement = '''
+            INSERT INTO Countries (Alpha2, Alpha3, EnglishName, Region, Subregion, Population, Area)
+            VALUES (?,?,?,?,?,?,?)
+            '''
+            #print(sql_input) #for debugging
+            cur.execute(statement, item_values)
 
-                item_values.append(row[6])
-                item_values.append(row[7])
+        conn.commit()
+        
 
-                #find BroadBeanOriginId
-                if row[8] == "Unknown":
-                    item_values.append("")
-                else:
-                    statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[8])
+    ## create Bars table
+    statement = '''
+    CREATE TABLE Bars (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Company TEXT,
+        SpecificBeanBarName TEXT,
+        REF TEXT,
+        ReviewDate TEXT,
+        CocoaPercent REAL,
+        CompanyLocationId INTEGER,
+        Rating REAL,
+        BeanType TEXT,
+        BroadBeanOriginId INTEGER
+        )
+    '''
+    try:
+        cur.execute(statement)
+    except:
+        pass
+
+    conn.commit()
+
+    ## populate Bars table
+    # check whether Bars is already populated
+    statement = '''SELECT Id FROM Bars'''
+    cur.execute(statement)
+    barslength = cur.fetchall()
+    if len(barslength) == 1795:
+        pass
+        #print("Bars already imported!") #for debugging
+
+    # if not alrady populated, populate Bars table
+    else:
+        statement = '''DELETE FROM Bars'''
+        cur.execute(statement)
+        conn.commit()
+        #print("Bars records deleted!") #for debugging
+
+        with open(BARSCSV, encoding='utf8') as csvDataFile:
+            csvReader = csv.reader(csvDataFile)
+            for row in csvReader:
+                if row[0] != "Company":
+                    conn = sqlite3.connect(DBNAME)
+                    cur = conn.cursor()
+
+                    item_values = []
+                    for i in range(4):
+                        item_values.append(row[i])
+
+                    #remove % from cocoa percentage
+                    percent = row[4][:-1]
+                    item_values.append(percent)
+
+                    #find CompanyLocationId
+                    statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[5])
                     cur.execute(statement)
                     result = cur.fetchone()
                     if result != None:
-                        originid = result[0]
+                        locationid = result[0]
                     else:
-                        originid = ''
-                    item_values.append(originid)
+                        locationid = ''
+                    item_values.append(locationid)
 
-                statement = '''
-                INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                '''
-                #print(item_values) #for debugging
-                cur.execute(statement, item_values)
-                conn.commit()
-                conn.close()
-        csvDataFile.close()
+                    item_values.append(row[6])
+                    item_values.append(row[7])
+
+                    #find BroadBeanOriginId
+                    if row[8] == "Unknown":
+                        item_values.append("")
+                    else:
+                        statement = '''SELECT Id FROM Countries WHERE EnglishName="{}"'''.format(row[8])
+                        cur.execute(statement)
+                        result = cur.fetchone()
+                        if result != None:
+                            originid = result[0]
+                        else:
+                            originid = ''
+                        item_values.append(originid)
+
+                    statement = '''
+                    INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    '''
+                    #print(item_values) #for debugging
+                    cur.execute(statement, item_values)
+                    conn.commit()
+                    conn.close()
+            csvDataFile.close()
+    pass
 
 
 
@@ -237,6 +248,7 @@ COMMAND_DICT = {
         "bottom" : ""
     }
 }
+
 
 def check_no_duplicates(command, command_list):
     matrix = [["sellcountry", "sourcecountry", "sellregion", "sourceregion"],
@@ -482,6 +494,8 @@ def long_column(element):
     return formatted
 
 def interactive_prompt():
+    build_database()
+
     help_text = load_help_text()
     command = ''
     while command != 'exit':
