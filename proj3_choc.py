@@ -48,14 +48,14 @@ cur.execute(statement)
 countrieslength = cur.fetchall()
 if len(countrieslength) == 250:
     pass
-    #print("Countries already imported!")
+    #print("Countries already imported!") #for debugging
 
 # if not alrady populated, populate Countries table
 else:
     statement = '''DELETE FROM Countries'''
     cur.execute(statement)
     conn.commit()
-    #print("Countries records deleted!")
+    #print("Countries records deleted!") #for debugging
 
     f = open(COUNTRIESJSON, 'r', encoding='utf8')
     f_text = f.read()
@@ -75,7 +75,7 @@ else:
         INSERT INTO Countries (Alpha2, Alpha3, EnglishName, Region, Subregion, Population, Area)
         VALUES (?,?,?,?,?,?,?)
         '''
-        #print(sql_input)
+        #print(sql_input) #for debugging
         cur.execute(statement, item_values)
 
     conn.commit()
@@ -110,14 +110,14 @@ cur.execute(statement)
 barslength = cur.fetchall()
 if len(barslength) == 1795:
     pass
-    #print("Bars already imported!")
+    #print("Bars already imported!") #for debugging
 
 # if not alrady populated, populate Bars table
 else:
     statement = '''DELETE FROM Bars'''
     cur.execute(statement)
     conn.commit()
-    #print("Bars records deleted!")
+    #print("Bars records deleted!") #for debugging
 
     with open(BARSCSV, encoding='utf8') as csvDataFile:
         csvReader = csv.reader(csvDataFile)
@@ -164,7 +164,7 @@ else:
                 INSERT INTO Bars (Company, SpecificBeanBarName, REF, ReviewDate, CocoaPercent, CompanyLocationId, Rating, BeanType, BroadBeanOriginId)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 '''
-                #print(item_values)
+                #print(item_values) #for debugging
                 cur.execute(statement, item_values)
                 conn.commit()
                 conn.close()
@@ -281,7 +281,7 @@ def process_command(command):
             params[item_split[0]] = item_split[1]
         else:
             params[item_split[0]] = ""
-    #print(params)
+    #print(params) #for debugging
 
     #check whether command parameters are valid with no duplicate parameters
     for item in params.keys():
